@@ -1,35 +1,11 @@
 # Assignment_4_Software-Engineering-ISYS1118-
 
-
-## Table of contents
-* [General info](#general-info)
-* [Technologies](#technologies)
-* [Setup](#setup)
-
-## General info
-This project is simple Lorem ipsum dolor generator.
-	
-## Technologies
-Project is created with:
-* Lorem version: 12.3
-* Ipsum version: 2.33
-* Ament library version: 999
-	
-## Setup
-To run this project, install it locally using npm:
-
-```
-$ cd ../lorem
-$ npm install
-$ npm start
-```
-
 `CLO 1: explain how iterative software engineering processes can facilitate software development
 CLO 2: evaluate requirements for a software system
 CLO 5: communicate effectively with others, especially regarding the progress of the system development and the content of the design by means of reports and presentations. Use appropriate design, `version control and collaboration tools to work effectively as a team.
 CLO 6: recognise and describe current trends in the area of software engineering. CLO 7: Design and carry out tests using various testing techniques and tools.
 
-2. Overview of Assessment
+### Overview of Assessment
 This assignment will assess your ability in terms of writing quality unit tests, test cases, user stories, and acceptance tests, as well as working with GitHub and CI/CD pipelines using GitHub Actions. You will be asked to implement and test some small functions in the
  
  DigtialID platform. Then you need to move your source code to GitHub. Also, you need to show that the GitHub Actions workflow is triggered to automatically run the Unit tests once code is pushed to GitHub. Furthermore, following the templates and structures taught in the lectures, you must write eight user stories for the DigtialID platform, along with their acceptance criteria. Finally, you need to make a video of your Java program.
