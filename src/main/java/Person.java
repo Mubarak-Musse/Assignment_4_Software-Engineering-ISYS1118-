@@ -1,42 +1,101 @@
-
-/*Activity 1 :  */
-
-
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.time.LocalDate;
+import java.time.Period;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-
+import java.util.List;
 
 public class Person {
 
+    private static final String PERSONS_FILE = "persons.txt";
+    private static final String IDS_FILE = "ids.txt";
+
     private String personID;
     private String firstName;
-    private String lastName; 
-    private String address;
-    private String birthdate;
-    // A variable that holds the demerit point 
-    // with offense day 
-    
-    private HashMap<Date, Integer> demeritPoints;
-    public boolean addPerson() {
+    private String lastName;
+    private String address;     // expected input: StreetNo|Street|City|Victoria|Country
+    private String birthdate;   // DD-MM-YYYY
 
-        // Write your Code your here
+    private HashMap<Date, Integer> demeritPoints = new HashMap<>();
 
-        return true;
+    public Person() {
     }
 
+    public Person(String personID, String firstName, String lastName, String address, String birthdate) {
+        this.personID = personID;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.address = address;
+        this.birthdate = birthdate;
+    }
+
+    // 1) addPerson()
+    public boolean addPerson() {
+        try {
+            if (!isValidPersonID(this.personID)) return false;
+            if (isBlank(this.firstName) || isBlank(this.lastName)) return false;
+            if (!isValidBirthdate(this.birthdate)) return false;
+            if (!isValidAddress(this.address)) return false;
+
+            Path path = Paths.get(PERSONS_FILE);
+
+            // avoid duplicate personID
+            if (Files.exists(path)) {
+                List<String> lines = Files.readAllLines(path);
+                for (String line : lines) {
+                    String[] parts = line.split("\\|");
+                    if (parts.length == 5 && parts[0].equals(this.personID)) {
+                        return false;
+                    }
+                }
+            }
+
+            // store address with commas (because we use | as delimiter in file)
+            String storedAddress = this.address.trim().replace("|", ",");
+
+            String record = this.personID.trim() + "|" +
+                    this.firstName.trim() + "|" +
+                    this.lastName.trim() + "|" +
+                    storedAddress + "|" +
+                    this.birthdate.trim() + System.lineSeparator();
+
+            Files.write(path, record.getBytes(),
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.APPEND);
+
+            return true;
+
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // 2) updatePersonalDetails(...)
     public boolean updatePersonalDetails(String newPersonID,
                                          String newFirstName,
                                          String newLastName,
                                          String newAddress,
                                          String newBirthdate) {
 
-
         try {
-            java.io.File file = new java.io.File(PERSONS_FILE);
+            File file = new File(PERSONS_FILE);
             if (!file.exists()) return false;
 
-            java.util.List<String> lines = java.nio.file.Files.readAllLines(file.toPath());
-            java.util.List<String> updatedLines = new java.util.ArrayList<>();
+            if (!isValidPersonID(newPersonID)) return false;
+            if (isBlank(newFirstName) || isBlank(newLastName)) return false;
+            if (!isValidBirthdate(newBirthdate)) return false;
+            if (!isValidAddress(newAddress)) return false;
+
+            List<String> lines = Files.readAllLines(file.toPath());
+            List<String> updatedLines = new ArrayList<>();
 
             boolean personFound = false;
 
@@ -50,50 +109,48 @@ public class Person {
                 String oldID = parts[0];
                 String oldFirst = parts[1];
                 String oldLast = parts[2];
-                String oldAddress = parts[3];
+                String oldStoredAddress = parts[3];  // already stored with commas
                 String oldBirthdate = parts[4];
 
                 if (oldID.equals(this.personID)) {
                     personFound = true;
 
-                    // Validate base conditions (same as addPerson)
-                    if (!isValidPersonID(newPersonID)) return false;
-                    if (!isValidBirthdate(newBirthdate)) return false;
-                    if (!isValidAddress(newAddress)) return false;
-
                     int oldAge = ageFromBirthdate(oldBirthdate);
 
-                    // Rule 1: Under 18 cannot change address
-                    if (oldAge < 18 && !oldAddress.equals(newAddress.replace("|", ","))) {
+                    String newStoredAddress = newAddress.trim().replace("|", ",");
+
+                    // Rule: if under 18, address can't change
+                    if (oldAge < 18 && !oldStoredAddress.equals(newStoredAddress)) {
                         return false;
                     }
 
-                    // Rule 2: If birthday changes, nothing else can change
-                    boolean birthdayChanged = !oldBirthdate.equals(newBirthdate);
+                    // Rule: if birthdate changes, nothing else can change
+                    boolean birthdayChanged = !oldBirthdate.equals(newBirthdate.trim());
                     boolean otherChanged =
-                            !oldID.equals(newPersonID) ||
-                                    !oldFirst.equals(newFirstName) ||
-                                    !oldLast.equals(newLastName) ||
-                                    !oldAddress.equals(newAddress.replace("|", ","));
+                            !oldID.equals(newPersonID.trim()) ||
+                                    !oldFirst.equals(newFirstName.trim()) ||
+                                    !oldLast.equals(newLastName.trim()) ||
+                                    !oldStoredAddress.equals(newStoredAddress);
 
                     if (birthdayChanged && otherChanged) {
                         return false;
                     }
 
-                    // Rule 3: If first digit of old ID is even, ID cannot change
+                    // Rule: if first digit of OLD id is even, id can't change
                     char firstChar = oldID.charAt(0);
-                    if ((firstChar - '0') % 2 == 0 && !oldID.equals(newPersonID)) {
-                        return false;
+                    if (Character.isDigit(firstChar)) {
+                        int d = firstChar - '0';
+                        if (d % 2 == 0 && !oldID.equals(newPersonID.trim())) {
+                            return false;
+                        }
                     }
 
-                    String storedAddress = newAddress.replace("|", ",");
-
                     String updatedLine =
-                            newPersonID + "|" +
-                                    newFirstName + "|" +
-                                    newLastName + "|" +
-                                    storedAddress + "|" +
-                                    newBirthdate;
+                            newPersonID.trim() + "|" +
+                                    newFirstName.trim() + "|" +
+                                    newLastName.trim() + "|" +
+                                    newStoredAddress + "|" +
+                                    newBirthdate.trim();
 
                     updatedLines.add(updatedLine);
                 } else {
@@ -103,26 +160,33 @@ public class Person {
 
             if (!personFound) return false;
 
-            java.nio.file.Files.write(file.toPath(), updatedLines);
+            Files.write(file.toPath(), updatedLines);
+
+            // keep object in sync (helps addID, etc.)
+            this.personID = newPersonID.trim();
+            this.firstName = newFirstName.trim();
+            this.lastName = newLastName.trim();
+            this.address = newAddress.trim();
+            this.birthdate = newBirthdate.trim();
 
             return true;
 
         } catch (Exception e) {
             return false;
         }
-        
+    }
 
-    } 
+    // 3) addID(...)
     public boolean addID(String idType, String idNumber) {
-
         try {
-            if (this.personID == null || this.personID.isEmpty()) return false;
+            if (this.personID == null || this.personID.trim().isEmpty()) return false;
             if (idType == null || idNumber == null) return false;
 
             String type = idType.trim().toUpperCase();
             String number = idNumber.trim();
 
             boolean valid;
+
             switch (type) {
                 case "PASSPORT":
                     valid = isValidPassport(number);
@@ -141,15 +205,13 @@ public class Person {
                     break;
 
                 case "STUDENT_CARD":
-
-                    if (this.birthdate == null || !isValidBirthdate(this.birthdate))
-                        return false;
+                    if (this.birthdate == null || !isValidBirthdate(this.birthdate)) return false;
 
                     int age = ageFromBirthdate(this.birthdate);
                     if (age >= 18) return false;
 
-                    if (hasAnyNonStudentID(this.personID))
-                        return false;
+                    // only allowed if they have no passport/licence/medicare already
+                    if (hasAnyNonStudentID(this.personID.trim())) return false;
 
                     valid = isValidStudentCard(number);
                     break;
@@ -160,14 +222,15 @@ public class Person {
 
             if (!valid) return false;
 
-            String line = this.personID + "|" + type + "|" + number + System.lineSeparator();
+            // avoid exact duplicate entry (simple check)
+            if (isDuplicateIDEntry(this.personID.trim(), type, number)) return false;
 
-            java.nio.file.Files.write(
-                    java.nio.file.Paths.get(IDS_FILE),
+            String line = this.personID.trim() + "|" + type + "|" + number + System.lineSeparator();
+
+            Files.write(Paths.get(IDS_FILE),
                     line.getBytes(),
-                    java.nio.file.StandardOpenOption.CREATE,
-                    java.nio.file.StandardOpenOption.APPEND
-            );
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.APPEND);
 
             return true;
 
@@ -175,26 +238,30 @@ public class Person {
             return false;
         }
     }
+
+    // not required by the 3 main tasks (left here so project compiles)
     public String addDemeritPoints() {
-
-
-        // Write Your Code here 
-        return "Sucess";
+        return "Success";
     }
-    private static final String PERSONS_FILE = "persons.txt";
-    private static final String IDS_FILE = "ids.txt";
 
+    // -----------------------
+    // validation helpers
+    // -----------------------
 
     private boolean isValidPersonID(String id) {
-        if (id == null || id.length() != 10) return false;
+        if (id == null) return false;
+        id = id.trim();
+        if (id.length() != 10) return false;
 
         char c1 = id.charAt(0);
         char c2 = id.charAt(1);
+
         if (c1 < '2' || c1 > '9') return false;
         if (c2 < '2' || c2 > '9') return false;
 
         char last1 = id.charAt(8);
         char last2 = id.charAt(9);
+
         if (last1 < 'A' || last1 > 'Z') return false;
         if (last2 < 'A' || last2 > 'Z') return false;
 
@@ -205,26 +272,29 @@ public class Person {
             boolean isDigit = Character.isDigit(ch);
             if (!isLetter && !isDigit) specialCount++;
         }
+
         return specialCount >= 2;
     }
 
     private boolean isValidBirthdate(String dob) {
         if (dob == null) return false;
+        dob = dob.trim();
         if (!dob.matches("\\d{2}-\\d{2}-\\d{4}")) return false;
 
-        int dd = Integer.parseInt(dob.substring(0, 2));
-        int mm = Integer.parseInt(dob.substring(3, 5));
-        int yyyy = Integer.parseInt(dob.substring(6, 10));
-
-        if (mm < 1 || mm > 12) return false;
-        if (dd < 1 || dd > 31) return false;
-        if (yyyy < 1900 || yyyy > 2100) return false;
-
-        return true;
+        // strict calendar validation (so 31-02-2000 fails)
+        try {
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd-MM-uuuu")
+                    .withResolverStyle(ResolverStyle.STRICT);
+            LocalDate.parse(dob, fmt);
+            return true;
+        } catch (DateTimeParseException e) {
+            return false;
+        }
     }
 
     private boolean isValidAddress(String addressWithPipes) {
         if (addressWithPipes == null) return false;
+
         String[] parts = addressWithPipes.split("\\|");
         if (parts.length != 5) return false;
 
@@ -241,17 +311,99 @@ public class Person {
     }
 
     private int ageFromBirthdate(String dob) {
-        int yyyy = Integer.parseInt(dob.substring(6, 10));
-        int mm = Integer.parseInt(dob.substring(3, 5));
-        int dd = Integer.parseInt(dob.substring(0, 2));
-
-        java.time.LocalDate birth = java.time.LocalDate.of(yyyy, mm, dd);
-        java.time.LocalDate today = java.time.LocalDate.now();
-        return java.time.Period.between(birth, today).getYears();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd-MM-uuuu")
+                .withResolverStyle(ResolverStyle.STRICT);
+        LocalDate birth = LocalDate.parse(dob.trim(), fmt);
+        return Period.between(birth, LocalDate.now()).getYears();
     }
 
+    // -----------------------
+    // ID rules (missing before)
+    // -----------------------
 
+    private boolean isValidPassport(String passport) {
+        // 8 chars: 2 uppercase letters + 6 digits
+        return passport != null && passport.matches("^[A-Z]{2}\\d{6}$");
+    }
+
+    private boolean isValidDriversLicence(String licence) {
+        // 10 chars: 2 uppercase letters + 8 digits
+        return licence != null && licence.matches("^[A-Z]{2}\\d{8}$");
+    }
+
+    private boolean isValidMedicare(String medicare) {
+        // 9 digits
+        return medicare != null && medicare.matches("^\\d{9}$");
+    }
+
+    private boolean isValidStudentCard(String studentCard) {
+        // 12 digits
+        return studentCard != null && studentCard.matches("^\\d{12}$");
+    }
+
+    private boolean hasAnyNonStudentID(String personId) {
+        try {
+            Path path = Paths.get(IDS_FILE);
+            if (!Files.exists(path)) return false;
+
+            List<String> lines = Files.readAllLines(path);
+            for (String line : lines) {
+                String[] parts = line.split("\\|");
+                if (parts.length != 3) continue;
+
+                String pid = parts[0].trim();
+                String type = parts[1].trim().toUpperCase();
+
+                if (pid.equals(personId) && !type.equals("STUDENT_CARD")) {
+                    return true;
+                }
+            }
+            return false;
+
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private boolean isDuplicateIDEntry(String personId, String type, String number) {
+        try {
+            Path path = Paths.get(IDS_FILE);
+            if (!Files.exists(path)) return false;
+
+            for (String line : Files.readAllLines(path)) {
+                String[] parts = line.split("\\|");
+                if (parts.length != 3) continue;
+
+                if (parts[0].trim().equals(personId)
+                        && parts[1].trim().equalsIgnoreCase(type)
+                        && parts[2].trim().equals(number)) {
+                    return true;
+                }
+            }
+            return false;
+
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
+    }
+
+    // getters/setters (usually helpful for tests)
+    public String getPersonID() { return personID; }
+    public void setPersonID(String personID) { this.personID = personID; }
+
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
+
+    public String getBirthdate() { return birthdate; }
+    public void setBirthdate(String birthdate) { this.birthdate = birthdate; }
 }
-
-
-
