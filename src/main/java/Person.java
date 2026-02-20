@@ -2,8 +2,8 @@
 /*Activity 1 :  */
 
 
-import java.util.HashMap;
 import java.util.Date;
+import java.util.HashMap;
 
 
 public class Person {
@@ -110,14 +110,80 @@ public class Person {
         } catch (Exception e) {
             return false;
         }
+        
 
-    } public String addDemeritPoints() {
+    } 
+    public boolean addID(String idType, String idNumber) {
+
+        try {
+            if (this.personID == null || this.personID.isEmpty()) return false;
+            if (idType == null || idNumber == null) return false;
+
+            String type = idType.trim().toUpperCase();
+            String number = idNumber.trim();
+
+            boolean valid;
+            switch (type) {
+                case "PASSPORT":
+                    valid = isValidPassport(number);
+                    break;
+
+                case "DRIVERS_LICENCE":
+                case "DRIVER_LICENCE":
+                case "DRIVERS_LICENSE":
+                case "DRIVER_LICENSE":
+                    type = "DRIVERS_LICENCE";
+                    valid = isValidDriversLicence(number);
+                    break;
+
+                case "MEDICARE":
+                    valid = isValidMedicare(number);
+                    break;
+
+                case "STUDENT_CARD":
+
+                    if (this.birthdate == null || !isValidBirthdate(this.birthdate))
+                        return false;
+
+                    int age = ageFromBirthdate(this.birthdate);
+                    if (age >= 18) return false;
+
+                    if (hasAnyNonStudentID(this.personID))
+                        return false;
+
+                    valid = isValidStudentCard(number);
+                    break;
+
+                default:
+                    return false;
+            }
+
+            if (!valid) return false;
+
+            String line = this.personID + "|" + type + "|" + number + System.lineSeparator();
+
+            java.nio.file.Files.write(
+                    java.nio.file.Paths.get(IDS_FILE),
+                    line.getBytes(),
+                    java.nio.file.StandardOpenOption.CREATE,
+                    java.nio.file.StandardOpenOption.APPEND
+            );
+
+            return true;
+
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    public String addDemeritPoints() {
 
 
         // Write Your Code here 
         return "Sucess";
     }
     private static final String PERSONS_FILE = "persons.txt";
+    private static final String IDS_FILE = "ids.txt";
+
 
     private boolean isValidPersonID(String id) {
         if (id == null || id.length() != 10) return false;
@@ -183,6 +249,51 @@ public class Person {
         java.time.LocalDate today = java.time.LocalDate.now();
         return java.time.Period.between(birth, today).getYears();
     }
+    private boolean isValidPassport(String passport) {
+    return passport != null && passport.matches("^[A-Z]{2}[0-9]{6}$");
+}
+
+private boolean isValidDriversLicence(String licence) {
+    return licence != null && licence.matches("^[A-Z]{2}[0-9]{8}$");
+}
+
+private boolean isValidMedicare(String medicare) {
+    return medicare != null && medicare.matches("^[0-9]{9}$");
+}
+
+private boolean isValidStudentCard(String studentCard) {
+    return studentCard != null && studentCard.matches("^[0-9]{12}$");
+}
+
+private boolean hasAnyNonStudentID(String pid) {
+    try {
+        java.nio.file.Path path = java.nio.file.Paths.get(IDS_FILE);
+        if (!java.nio.file.Files.exists(path)) return false;
+
+        java.util.List<String> lines = java.nio.file.Files.readAllLines(path);
+
+        for (String line : lines) {
+            String[] parts = line.split("\\|");
+            if (parts.length < 3) continue;
+
+            String storedPID = parts[0].trim();
+            String storedType = parts[1].trim().toUpperCase();
+
+            if (storedPID.equals(pid)) {
+                if (storedType.equals("PASSPORT") ||
+                    storedType.equals("DRIVERS_LICENCE") ||
+                    storedType.equals("MEDICARE")) {
+                    return true;
+                }
+            }
+        }
+        return false;
+
+    } catch (Exception e) {
+        return false;
+    }
+}
+
 
 }
 
