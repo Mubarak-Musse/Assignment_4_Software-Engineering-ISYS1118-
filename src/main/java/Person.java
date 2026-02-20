@@ -249,50 +249,6 @@ public class Person {
         java.time.LocalDate today = java.time.LocalDate.now();
         return java.time.Period.between(birth, today).getYears();
     }
-    private boolean isValidPassport(String passport) {
-    return passport != null && passport.matches("^[A-Z]{2}[0-9]{6}$");
-}
-
-private boolean isValidDriversLicence(String licence) {
-    return licence != null && licence.matches("^[A-Z]{2}[0-9]{8}$");
-}
-
-private boolean isValidMedicare(String medicare) {
-    return medicare != null && medicare.matches("^[0-9]{9}$");
-}
-
-private boolean isValidStudentCard(String studentCard) {
-    return studentCard != null && studentCard.matches("^[0-9]{12}$");
-}
-
-private boolean hasAnyNonStudentID(String pid) {
-    try {
-        java.nio.file.Path path = java.nio.file.Paths.get(IDS_FILE);
-        if (!java.nio.file.Files.exists(path)) return false;
-
-        java.util.List<String> lines = java.nio.file.Files.readAllLines(path);
-
-        for (String line : lines) {
-            String[] parts = line.split("\\|");
-            if (parts.length < 3) continue;
-
-            String storedPID = parts[0].trim();
-            String storedType = parts[1].trim().toUpperCase();
-
-            if (storedPID.equals(pid)) {
-                if (storedType.equals("PASSPORT") ||
-                    storedType.equals("DRIVERS_LICENCE") ||
-                    storedType.equals("MEDICARE")) {
-                    return true;
-                }
-            }
-        }
-        return false;
-
-    } catch (Exception e) {
-        return false;
-    }
-}
 
 
 }
