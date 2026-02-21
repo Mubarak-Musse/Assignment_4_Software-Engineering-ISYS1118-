@@ -12,11 +12,10 @@ public class Person {
     private String firstName;
     private String lastName; 
     private String address;
-    private String birthdate;
-    // A variable that holds the demerit point 
-    // with offense day 
-    
+    private String birthdate; 
     private HashMap<Date, Integer> demeritPoints;
+    
+
     public boolean addPerson() {
 
         // Write your Code your here
